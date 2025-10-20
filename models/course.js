@@ -1,10 +1,20 @@
 import mongoose from "mongoose";
 
 const courseSchema = new mongoose.Schema({
-  title: String,
-  json: String,
-  qna: String,
-  flashCard: String,
+  title: {
+    type: String,
+  },
+  json: {
+    type: String,
+  },
+  qna: {
+    type: String,
+    default: "loading"
+  },
+  flashCard: {
+    type: String,
+    default: "loading"
+  },
 
   user: {
     type: mongoose.Schema.Types.ObjectId,
