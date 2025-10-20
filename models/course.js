@@ -1,10 +1,6 @@
 import mongoose from "mongoose";
 
 const courseSchema = new mongoose.Schema({
-  id: {
-    type: Number,
-    autoIncrement: true,
-  },
   title: String,
   json: String,
   qna: String,
