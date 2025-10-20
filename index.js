@@ -122,21 +122,7 @@ app.post("/upload", auth, upload.single("file"), async (req, res) => {
       size: req.file.size,
     });
 
-    const summary = await analyzeFile(req.file.buffer, req.file.mimetype);
-
-    // Extract JSON from the AI response
-    let courseData;
-    try {
-      // Remove markdown code blocks if present
-      const jsonMatch =
-        summary.match(/```json\n([\s\S]*?)\n```/) ||
-        summary.match(/```\n([\s\S]*?)\n```/);
-      const jsonString = jsonMatch ? jsonMatch[1] : summary;
-      courseData = JSON.parse(jsonString);
-    } catch (parseError) {
-      console.error("Failed to parse JSON:", parseError);
-      return res.status(500).json({ error: "Failed to parse AI response" });
-    }
+    const courseData = await analyzeFile(req.file.buffer, req.file.mimetype);
 
     // Save to MongoDB
     const course = new Course({
@@ -166,10 +152,9 @@ app.post("/upload", auth, upload.single("file"), async (req, res) => {
         
         // Generate Flashcards
         const flashcardsResult = await generateFlashcards(courseContentString);
-        
-        // Update course with QnA and flashcards
-        course.qna = qnaResult;
-        course.flashCard = flashcardsResult;
+
+        course.qna = JSON.stringify(qnaResult);
+        course.flashCard = JSON.stringify(flashcardsResult);
         await course.save();
         
         console.log(`Successfully updated course ${course._id} with QnA and flashcards`);
@@ -217,6 +202,21 @@ app.listen(PORT, () => {
 });
 
 const genAIClient = new GoogleGenerativeAI(process.env.API_TOKEN);
+
+// Utility function to parse AI responses and extract JSON
+function parseAIResponse(aiResponse) {
+  try {
+    // Remove markdown code blocks if present
+    const jsonMatch =
+      aiResponse.match(/```json\n([\s\S]*?)\n```/) ||
+      aiResponse.match(/```\n([\s\S]*?)\n```/);
+    const jsonString = jsonMatch ? jsonMatch[1] : aiResponse;
+    return JSON.parse(jsonString);
+  } catch (parseError) {
+    console.error("Failed to parse AI JSON:", parseError);
+    throw new Error("Failed to parse AI response");
+  }
+}
 
 async function analyzeFile(fileBuffer, mimeType) {
   const model = genAIClient.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -284,7 +284,7 @@ async function analyzeFile(fileBuffer, mimeType) {
 
   const response = await result.response;
   const text = response.text();
-  return text;
+  return parseAIResponse(text);
 }
 
 async function qna(courseContent) {
@@ -317,7 +317,7 @@ async function qna(courseContent) {
     const result = await chat.sendMessage(question + "\n\nCourse Content:\n" + courseContent);
     const response = await result.response;
     const text = response.text();
-    return text;
+    return parseAIResponse(text);
 }  
 
 async function generateFlashcards(courseContent) {
@@ -352,5 +352,5 @@ async function generateFlashcards(courseContent) {
     const result = await chat.sendMessage(prompt + "\n\nCourse Content:\n" + courseContent);
     const response = await result.response;
     const text = response.text();
-    return text;
+    return parseAIResponse(text);
 }  
