@@ -72,7 +72,7 @@ app.post("/register", async (req, res) => {
     res.status(500).send("Server error");
   }
 });
-
+ 
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
