@@ -170,10 +170,24 @@ app.post("/upload", auth, upload.single("file"), async (req, res) => {
 
 app.get("/courses", auth, async (req, res) => {
   try {
-    const courses = await Course.find({ user: req.user.id }).select(
-      "title _id"
-    );
-    res.json(courses);
+    // Fetch user email once
+    const user = await User.findById(req.user.id).select('email');
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    const courses = await Course.find({ user: req.user.id })
+      .select("title _id createdAt");
+    
+    // Transform courses to include user email
+    const transformedCourses = courses.map(course => ({
+      _id: course._id,
+      title: course.title,
+      createdAt: course.createdAt,
+      userEmail: user.email
+    }));
+    
+    res.json(transformedCourses);
   } catch (error) {
     console.error("Fetch courses error:", error);
     res.status(500).json({ error: "Failed to fetch courses" });
@@ -182,6 +196,12 @@ app.get("/courses", auth, async (req, res) => {
 
 app.get("/courses/:id", auth, async (req, res) => {
   try {
+    // Fetch user email once
+    const user = await User.findById(req.user.id).select('email');
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
     const course = await Course.findOne({
       _id: req.params.id,
       user: req.user.id,
@@ -191,7 +211,19 @@ app.get("/courses/:id", auth, async (req, res) => {
       return res.status(404).json({ error: "Course not found" });
     }
 
-    res.json(course);
+    // Transform course to include user email
+    const transformedCourse = {
+      _id: course._id,
+      title: course.title,
+      json: course.json,
+      qna: course.qna,
+      flashCard: course.flashCard,
+      createdAt: course.createdAt,
+      updatedAt: course.updatedAt,
+      userEmail: user.email
+    };
+
+    res.json(transformedCourse);
   } catch (error) {
     console.error("Fetch course error:", error);
     res.status(500).json({ error: "Failed to fetch course" });
