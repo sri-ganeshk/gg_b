@@ -170,10 +170,19 @@ app.post("/upload", auth, upload.single("file"), async (req, res) => {
 
 app.get("/courses", auth, async (req, res) => {
   try {
-    const courses = await Course.find({ user: req.user.id }).select(
-      "title _id"
-    );
-    res.json(courses);
+    const courses = await Course.find({ user: req.user.id })
+      .populate('user', 'email')
+      .select("title _id createdAt user");
+    
+    // Transform courses to include user email at the top level
+    const transformedCourses = courses.map(course => ({
+      _id: course._id,
+      title: course.title,
+      createdAt: course.createdAt,
+      userEmail: course.user?.email
+    }));
+    
+    res.json(transformedCourses);
   } catch (error) {
     console.error("Fetch courses error:", error);
     res.status(500).json({ error: "Failed to fetch courses" });
@@ -185,13 +194,25 @@ app.get("/courses/:id", auth, async (req, res) => {
     const course = await Course.findOne({
       _id: req.params.id,
       user: req.user.id,
-    });
+    }).populate('user', 'email');
 
     if (!course) {
       return res.status(404).json({ error: "Course not found" });
     }
 
-    res.json(course);
+    // Transform course to include user email at the top level
+    const transformedCourse = {
+      _id: course._id,
+      title: course.title,
+      json: course.json,
+      qna: course.qna,
+      flashCard: course.flashCard,
+      createdAt: course.createdAt,
+      updatedAt: course.updatedAt,
+      userEmail: course.user?.email
+    };
+
+    res.json(transformedCourse);
   } catch (error) {
     console.error("Fetch course error:", error);
     res.status(500).json({ error: "Failed to fetch course" });
