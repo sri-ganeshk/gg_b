@@ -177,13 +177,14 @@ app.get("/courses", auth, async (req, res) => {
     }
     
     const courses = await Course.find({ user: req.user.id })
-      .select("title _id createdAt");
+      .select("title _id createdAt updatedAt");
     
     // Transform courses to include user email
     const transformedCourses = courses.map(course => ({
       _id: course._id,
       title: course.title,
       createdAt: course.createdAt,
+      updatedAt: course.updatedAt,
       userEmail: user.email
     }));
     
